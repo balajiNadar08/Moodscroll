@@ -1,50 +1,76 @@
-# Welcome to your Expo app 👋
+## Project README
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+### Overview
 
-## Get started
+This project is a React Native application built with a focus on performance, clean UI, and modular architecture. It includes features like dynamic content rendering, custom styling using Tailwind CSS, and optimized list handling.
 
-1. Install dependencies
+### Features
+
+* Dynamic UI with reusable components
+* Optimized list rendering using `FlatList`
+* Custom fonts integration
+* Background media support (images/videos)
+* Structured data handling using JSON
+* Scalable folder architecture
+
+### Tech Stack
+
+* React Native
+* Expo
+* TypeScript
+* Tailwind CSS (via NativeWind or similar)
+* Lucide Icons
+
+### Installation
+
+1. Clone the repository:
+
+   ```bash
+   git clone <your-repo-url>
+   cd <project-folder>
+   ```
+
+2. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+3. Start the development server:
 
    ```bash
    npx expo start
    ```
 
-In the output, you'll find options to open the app in a
+### Project Structure
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```
+/assets        → images, fonts, videos  
+/components    → reusable UI components  
+/data          → static JSON data (e.g., quotes)  
+/screens       → app screens/views  
+/styles        → global styles and config  
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+### Usage
 
-## Learn more
+* Modify data inside `/data` to update app content
+* Add new components in `/components` for reuse
+* Use Tailwind classes for styling UI elements
 
-To learn more about developing your project with Expo, look at the following resources:
+### Performance Notes
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+* Use memoized components for large lists
+* Avoid inline functions inside render methods
+* Optimize images and videos for mobile
 
-## Join the community
+### Future Improvements
 
-Join our community of developers creating universal apps.
+* Add state management (Redux/Zustand)
+* Implement backend integration
+* Improve animations and transitions
+* Add user authentication
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### License
+
+This project is open-source and available under the MIT License.
