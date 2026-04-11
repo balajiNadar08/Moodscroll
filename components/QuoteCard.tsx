@@ -5,10 +5,10 @@ import {
   Heart,
   Plus,
   Share,
-  UserRound
+  UserRound,
 } from "lucide-react-native";
-import { Text, View } from "react-native";
-import { VideoView, useVideoPlayer } from "expo-video";
+import { Text, View, ImageBackground } from "react-native";
+// import { VideoView, useVideoPlayer } from "expo-video";
 
 type Quote = {
   id: string;
@@ -31,29 +31,12 @@ type QuoteCardProps = {
 };
 
 export default function QuoteCard({ quote }: QuoteCardProps) {
-  const player = useVideoPlayer(
-    require("../assets/videos/vid1.mp4"),
-    (player) => {
-      player.loop = true;
-      player.muted = true;
-      player.play();
-    },
-  );
-
   return (
-    <View className="flex-1">
-      <VideoView
-  player={player}
-  style={{
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  }}
-  contentFit="cover"
-/>
-
+    <ImageBackground
+      source={require("../assets/images/backgrounds/bg2.webp")}
+      style={{ flex: 1 }}
+      resizeMode="cover"
+    >
       <View className="flex-1 bg-black/40">
         <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
           <UserRound color="white" size={26} strokeWidth={1.5} />
@@ -101,6 +84,7 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
           </View>
         </View>
 
+        {/* Bottom Icons (no wrappers) */}
         <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
           <Boxes color="white" size={26} strokeWidth={1.5} />
           <View className="gap-6">
@@ -109,6 +93,6 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
           </View>
         </View>
       </View>
-    </View>
+    </ImageBackground>
   );
 }
