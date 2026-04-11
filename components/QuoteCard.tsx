@@ -1,3 +1,4 @@
+import { Link } from "expo-router";
 import {
   Boxes,
   Earth,
@@ -5,10 +6,9 @@ import {
   Heart,
   Plus,
   Share,
-  UserRound,
+  UserRound
 } from "lucide-react-native";
 import { Text, View, ImageBackground } from "react-native";
-// import { VideoView, useVideoPlayer } from "expo-video";
 
 type Quote = {
   id: string;
@@ -33,7 +33,7 @@ type QuoteCardProps = {
 export default function QuoteCard({ quote }: QuoteCardProps) {
   return (
     <ImageBackground
-      source={require("../assets/images/backgrounds/bg2.webp")}
+      source={require("../assets/images/backgrounds/bg1.webp")}
       style={{ flex: 1 }}
       resizeMode="cover"
     >
@@ -84,9 +84,10 @@ export default function QuoteCard({ quote }: QuoteCardProps) {
           </View>
         </View>
 
-        {/* Bottom Icons (no wrappers) */}
         <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
-          <Boxes color="white" size={26} strokeWidth={1.5} />
+          <Link href="/collection">
+            <Boxes color="white" size={26} strokeWidth={1.5} />
+          </Link>
           <View className="gap-6">
             <Earth color="white" size={26} strokeWidth={1.5} />
             <Share color="white" size={26} strokeWidth={1.5} />
