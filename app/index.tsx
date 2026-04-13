@@ -8,8 +8,11 @@ import {
 import "./global.css";
 import { Inter_300Light, Inter_400Regular } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
+import { useState } from "react";
+
 import sampleData from "../data/sampleData.json";
 import QuoteCard from "../components/QuoteCard";
+import FilterModal from "../components/FilterModal";
 
 const { height } = Dimensions.get("window");
 
@@ -19,7 +22,16 @@ export default function Index() {
     Inter_400Regular,
   });
 
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
   const quotes = sampleData?.quotes || [];
+
+  const filteredQuotes = quotes.filter(
+    (q) =>
+      selectedGenres.length === 0 ||
+      q.tags?.some((tag: string) => selectedGenres.includes(tag.toLowerCase())),
+  );
 
   if (!fontsLoaded) {
     return (
@@ -29,38 +41,64 @@ export default function Index() {
     );
   }
 
-  if (quotes.length === 0) {
+  if (filteredQuotes.length === 0) {
     return (
       <View className="flex-1 justify-center items-center bg-[#001a2c]">
-        <Text className="text-white">No quotes available.</Text>
+        <Text className="text-white">No quotes found.</Text>
+
+        <Text
+          className="text-gray-400 mt-4"
+          onPress={() => setIsFilterOpen(true)}
+        >
+          Adjust filters
+        </Text>
+
+        <FilterModal
+          visible={isFilterOpen}
+          onClose={() => setIsFilterOpen(false)}
+          selectedGenres={selectedGenres}
+          setSelectedGenres={setSelectedGenres}
+        />
       </View>
     );
   }
 
   return (
-    <FlatList
-      data={quotes}
-      keyExtractor={(item) => item.id}
-      renderItem={({ item }) => (
-        <View style={{ height }}>
-          <QuoteCard quote={item} />
-        </View>
-      )}
-      pagingEnabled
-      decelerationRate="fast"
-      snapToInterval={height}
-      snapToAlignment="start"
-      showsVerticalScrollIndicator={false}
-      removeClippedSubviews
-      initialNumToRender={2}
-      maxToRenderPerBatch={3}
-      windowSize={5}
-      overScrollMode="never"
-      getItemLayout={(data, index) => ({
-        length: height,
-        offset: height * index,
-        index,
-      })}
-    />
+    <View className="flex-1">
+      <FlatList
+        data={filteredQuotes}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View style={{ height }}>
+            <QuoteCard
+              quote={item}
+              onOpenFilter={() => setIsFilterOpen(true)}
+            />
+          </View>
+        )}
+        pagingEnabled
+        decelerationRate="fast"
+        snapToInterval={height}
+        snapToAlignment="start"
+        showsVerticalScrollIndicator={false}
+        removeClippedSubviews
+        initialNumToRender={2}
+        maxToRenderPerBatch={3}
+        windowSize={5}
+        overScrollMode="never"
+        getItemLayout={(data, index) => ({
+          length: height,
+          offset: height * index,
+          index,
+        })}
+      />
+
+      <FilterModal
+        visible={isFilterOpen}
+        onClose={() => setIsFilterOpen(false)}
+        selectedGenres={selectedGenres}
+        setSelectedGenres={setSelectedGenres}
+      />
+    </View>
   );
 }
