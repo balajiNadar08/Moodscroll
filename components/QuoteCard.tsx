@@ -7,9 +7,20 @@ import {
   Plus,
   Share,
   UserRound,
+  X,
 } from "lucide-react-native";
 
-import { Text, View, ImageBackground, TouchableOpacity } from "react-native";
+import {
+  Text,
+  View,
+  ImageBackground,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+  FlatList,
+} from "react-native";
+
+import { useState } from "react";
 
 type Quote = {
   id: string;
@@ -28,82 +39,157 @@ type Quote = {
   };
 };
 
+type Collection = {
+  id: string;
+  name: string;
+};
+
 type QuoteCardProps = {
   quote: Quote;
   onOpenFilter: () => void;
 };
 
 export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+
+  //* temp data
+  const collections: Collection[] = [
+    { id: "1", name: "Motivation" },
+    { id: "2", name: "Spiritual" },
+    { id: "3", name: "Life Lessons" },
+    { id: "4", name: "Favorites" },
+  ];
+
+  const handleAddToCollection = (collectionId: string) => {
+    console.log("Added to collection:", collectionId);
+
+    //! pending!!!
+
+    setShowCollectionModal(false);
+  };
+
   return (
-    <ImageBackground
-      source={require("../assets/images/backgrounds/bg1.webp")}
-      style={{ flex: 1 }}
-      resizeMode="cover"
-    >
-      <View className="flex-1 bg-black/40">
-        <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
-          <UserRound color="white" size={26} strokeWidth={1.5} />
+    <>
+      <ImageBackground
+        source={require("../assets/images/backgrounds/bg1.webp")}
+        style={{ flex: 1 }}
+        resizeMode="cover"
+      >
+        <View className="flex-1 bg-black/40">
+          <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
+            <UserRound color="white" size={26} strokeWidth={1.5} />
 
-          <TouchableOpacity onPress={onOpenFilter}>
-            <Funnel color="white" size={26} />
-          </TouchableOpacity>
-        </View>
+            <TouchableOpacity onPress={onOpenFilter}>
+              <Funnel color="white" size={26} />
+            </TouchableOpacity>
+          </View>
 
-        <View className="flex-1 justify-center items-center px-12">
-          <Text
-            style={{ fontFamily: "Inter_400Regular" }}
-            className="text-white text-center text-2xl leading-relaxed tracking-wide"
-          >
-            {quote.text}
-          </Text>
+          <View className="flex-1 justify-center items-center px-12">
+            <Text
+              style={{ fontFamily: "Inter_400Regular" }}
+              className="text-white text-center text-2xl leading-relaxed tracking-wide"
+            >
+              {quote.text}
+            </Text>
 
-          {(quote.source?.type === "gita" ||
-            quote.source?.type === "bible") && (
-            <View className="mt-8 items-center">
-              <Text
-                style={{ fontFamily: "Inter_300Light" }}
-                className="text-white font-bold text-md"
-              >
-                {quote.source?.type?.toUpperCase()}{" "}
-                {quote.source?.chapter != null && quote.source?.verse != null
-                  ? `${quote.source.chapter}.${quote.source.verse}`
-                  : ""}
-              </Text>
-            </View>
-          )}
-
-          {quote.source?.name &&
-            quote.source?.name !== "Bhagavad Gita" &&
-            quote.source?.name !== "Bible" && (
+            {(quote.source?.type === "gita" ||
+              quote.source?.type === "bible") && (
               <View className="mt-8 items-center">
                 <Text
                   style={{ fontFamily: "Inter_300Light" }}
-                  className="text-white text-md"
+                  className="text-white font-bold text-md"
                 >
-                  - {quote.source?.name}
+                  {quote.source?.type?.toUpperCase()}{" "}
+                  {quote.source?.chapter != null && quote.source?.verse != null
+                    ? `${quote.source.chapter}.${quote.source.verse}`
+                    : ""}
                 </Text>
               </View>
             )}
 
-          <View className="flex-row gap-6 mt-12">
-            <Heart color="white" size={32} />
-            <Plus color="white" size={32} />
+            {quote.source?.name &&
+              quote.source?.name !== "Bhagavad Gita" &&
+              quote.source?.name !== "Bible" && (
+                <View className="mt-8 items-center">
+                  <Text
+                    style={{ fontFamily: "Inter_300Light" }}
+                    className="text-white text-md"
+                  >
+                    - {quote.source?.name}
+                  </Text>
+                </View>
+              )}
+
+            <View className="flex-row gap-6 mt-12">
+              <Heart color="white" size={32} />
+
+              <TouchableOpacity onPress={() => setShowCollectionModal(true)}>
+                <Plus color="white" size={32} />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
 
-        <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
-          <Link href="/collection">
-            <Boxes color="white" size={26} strokeWidth={1.5} />
-          </Link>
-
-          <View className="gap-6">
-            <Link href="/community">
-              <Earth color="white" size={26} strokeWidth={1.5} />
+          <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
+            <Link href="/collection">
+              <Boxes color="white" size={26} strokeWidth={1.5} />
             </Link>
-            <Share color="white" size={26} strokeWidth={1.5} />
+
+            <View className="gap-6">
+              <Link href="/community">
+                <Earth color="white" size={26} strokeWidth={1.5} />
+              </Link>
+
+              <Share color="white" size={26} strokeWidth={1.5} />
+            </View>
           </View>
         </View>
-      </View>
-    </ImageBackground>
+      </ImageBackground>
+
+      <Modal visible={showCollectionModal} transparent animationType="slide">
+        <Pressable
+          className="flex-1 bg-black/50 justify-end"
+          onPress={() => setShowCollectionModal(false)}
+        >
+          <Pressable
+            className="bg-zinc-900 rounded-t-3xl px-6 pt-6 pb-10"
+            onPress={(e) => e.stopPropagation()}
+          >
+            <View className="flex-row justify-between items-center mb-6">
+              <Text className="text-white text-xl font-semibold">
+                Save Quote
+              </Text>
+
+              <TouchableOpacity onPress={() => setShowCollectionModal(false)}>
+                <X color="white" size={24} />
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity className="bg-white rounded-2xl py-4 px-4 mb-5">
+              <Text className="text-black text-center font-semibold">
+                + Create New Collection
+              </Text>
+            </TouchableOpacity>
+
+            <Text className="text-zinc-400 mb-3 text-sm">
+              Existing Collections
+            </Text>
+
+            <FlatList
+              data={collections}
+              keyExtractor={(item) => item.id}
+              showsVerticalScrollIndicator={false}
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  onPress={() => handleAddToCollection(item.id)}
+                  className="bg-zinc-800 rounded-2xl px-4 py-4 mb-3"
+                >
+                  <Text className="text-white text-base">{item.name}</Text>
+                </TouchableOpacity>
+              )}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
   );
 }
