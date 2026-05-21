@@ -44,10 +44,10 @@ const starterPosts: Post[] = [
   {
     id: "2",
     username: "bala",
-    text: "You don’t need more time. You need less distraction.",
+    text: "You don't need more time. You need less distraction.",
     votes: 89,
     userVote: null,
-    createdAt: Date.now() - 2000,
+    createdAt: Date.now() - 2000
   },
 
   {
