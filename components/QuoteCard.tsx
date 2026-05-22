@@ -19,8 +19,9 @@ import {
   Pressable,
   FlatList,
 } from "react-native";
-
-import { useState } from "react";
+import { useState, useRef } from "react";
+import ViewShot from "react-native-view-shot";
+import * as Sharing from "expo-sharing";
 
 type Quote = {
   id: string;
@@ -51,13 +52,13 @@ type QuoteCardProps = {
 
 export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const viewShotRef = useRef<ViewShot>(null);
 
   //* temp data
   const collections: Collection[] = [
     { id: "1", name: "Motivation" },
-    { id: "2", name: "Spiritual" },
     { id: "3", name: "Life Lessons" },
-    { id: "4", name: "Favorites" },
+    { id: "4", name: "❤️ Favorites" },
   ];
 
   const handleAddToCollection = (collectionId: string) => {
@@ -66,6 +67,19 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
     //! pending!!!
 
     setShowCollectionModal(false);
+  };
+
+  const shareImg = async () => {
+    try {
+      const ref = viewShotRef.current;
+
+      if (!ref || !ref.capture) return;
+
+      const uri = await ref.capture();
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.log(error);
+    }
   };
 
   return (
@@ -85,40 +99,43 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
           </View>
 
           <View className="flex-1 justify-center items-center px-12">
-            <Text
-              style={{ fontFamily: "Inter_400Regular" }}
-              className="text-white text-center text-2xl leading-relaxed tracking-wide"
-            >
-              {quote.text}
-            </Text>
+            <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1 }}>
+              <Text
+                style={{ fontFamily: "Inter_400Regular" }}
+                className="text-white text-center text-2xl leading-relaxed tracking-wide"
+              >
+                {quote.text}
+              </Text>
 
-            {(quote.source?.type === "gita" ||
-              quote.source?.type === "bible") && (
-              <View className="mt-8 items-center">
-                <Text
-                  style={{ fontFamily: "Inter_300Light" }}
-                  className="text-white font-bold text-md"
-                >
-                  {quote.source?.type?.toUpperCase()}{" "}
-                  {quote.source?.chapter != null && quote.source?.verse != null
-                    ? `${quote.source.chapter}.${quote.source.verse}`
-                    : ""}
-                </Text>
-              </View>
-            )}
-
-            {quote.source?.name &&
-              quote.source?.name !== "Bhagavad Gita" &&
-              quote.source?.name !== "Bible" && (
+              {(quote.source?.type === "gita" ||
+                quote.source?.type === "bible") && (
                 <View className="mt-8 items-center">
                   <Text
                     style={{ fontFamily: "Inter_300Light" }}
-                    className="text-white text-md"
+                    className="text-white font-bold text-md"
                   >
-                    - {quote.source?.name}
+                    {quote.source?.type?.toUpperCase()}{" "}
+                    {quote.source?.chapter != null &&
+                    quote.source?.verse != null
+                      ? `${quote.source.chapter}.${quote.source.verse}`
+                      : ""}
                   </Text>
                 </View>
               )}
+
+              {quote.source?.name &&
+                quote.source?.name !== "Bhagavad Gita" &&
+                quote.source?.name !== "Bible" && (
+                  <View className="mt-8 items-center">
+                    <Text
+                      style={{ fontFamily: "Inter_300Light" }}
+                      className="text-white text-md"
+                    >
+                      - {quote.source?.name}
+                    </Text>
+                  </View>
+                )}
+            </ViewShot>
 
             <View className="flex-row gap-6 mt-12">
               <Heart color="white" size={32} />
@@ -139,12 +156,13 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
                 <Earth color="white" size={26} strokeWidth={1.5} />
               </Link>
 
-              <Share color="white" size={26} strokeWidth={1.5} />
+              <TouchableOpacity onPress={shareImg}>
+                <Share color="white" size={26} strokeWidth={1.5} />
+              </TouchableOpacity>
             </View>
           </View>
         </View>
       </ImageBackground>
-
       <Modal visible={showCollectionModal} transparent animationType="slide">
         <Pressable
           className="flex-1 bg-black/50 justify-end"
