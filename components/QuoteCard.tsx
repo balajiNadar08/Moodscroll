@@ -91,8 +91,10 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
       >
         <View className="flex-1 bg-black/40">
           <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
-            <UserRound color="white" size={26} strokeWidth={1.5} />
-
+            <Link href="/profile">
+              <UserRound color="white" size={26} strokeWidth={1.5} />
+            </Link>
+            
             <TouchableOpacity onPress={onOpenFilter}>
               <Funnel color="white" size={26} />
             </TouchableOpacity>
