@@ -5,6 +5,7 @@ import {
   FlatList,
   Text,
 } from "react-native";
+import Toast from "react-native-toast-message";
 import "./global.css";
 import { Inter_300Light, Inter_400Regular } from "@expo-google-fonts/inter";
 import { useFonts } from "expo-font";
@@ -13,6 +14,7 @@ import { useState } from "react";
 import sampleData from "../data/sampleData.json";
 import QuoteCard from "../components/QuoteCard";
 import FilterModal from "../components/FilterModal";
+import { toastConfig } from "../components/toastConfig";
 
 const { height } = Dimensions.get("window");
 
@@ -99,6 +101,7 @@ export default function Index() {
         selectedGenres={selectedGenres}
         setSelectedGenres={setSelectedGenres}
       />
+      <Toast config={toastConfig} />
     </View>
   );
 }
