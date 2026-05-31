@@ -19,9 +19,12 @@ import {
   Pressable,
   FlatList,
 } from "react-native";
+
 import { useState, useRef } from "react";
 import ViewShot from "react-native-view-shot";
 import * as Sharing from "expo-sharing";
+
+import CreateCollectionModal from "@/components/CreateCollectionModal";
 
 type Quote = {
   id: string;
@@ -52,19 +55,25 @@ type QuoteCardProps = {
 
 export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
+
+  const [createCollectionModal, setCreateCollectionModal] = useState(false);
+
+  const [collections, setCollections] = useState<Collection[]>([
+    { id: "1", name: "Motivation" },
+    { id: "2", name: "Life Lessons" },
+    { id: "3", name: "❤️ Favorites" },
+  ]);
+
   const viewShotRef = useRef<ViewShot>(null);
 
-  //* temp data
-  const collections: Collection[] = [
-    { id: "1", name: "Motivation" },
-    { id: "3", name: "Life Lessons" },
-    { id: "4", name: "❤️ Favorites" },
-  ];
+  const handleAddToCollection = (
+    collectionId: string,
+    collectionName?: string,
+  ) => {
+    console.log("Added quote:", quote.id);
+    console.log("Collection:", collectionId, collectionName);
 
-  const handleAddToCollection = (collectionId: string) => {
-    console.log("Added to collection:", collectionId);
-
-    //! pending!!!
+    //! save logic here
 
     setShowCollectionModal(false);
   };
@@ -76,6 +85,7 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
       if (!ref || !ref.capture) return;
 
       const uri = await ref.capture();
+
       await Sharing.shareAsync(uri);
     } catch (error) {
       console.log(error);
@@ -94,7 +104,7 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
             <Link href="/profile">
               <UserRound color="white" size={26} strokeWidth={1.5} />
             </Link>
-            
+
             <TouchableOpacity onPress={onOpenFilter}>
               <Funnel color="white" size={26} />
             </TouchableOpacity>
@@ -165,13 +175,14 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
           </View>
         </View>
       </ImageBackground>
-      <Modal visible={showCollectionModal} transparent animationType="slide">
+
+      <Modal visible={showCollectionModal} transparent animationType="fade">
         <Pressable
-          className="flex-1 bg-black/50 justify-end"
+          className="flex-1 bg-black/30 justify-end"
           onPress={() => setShowCollectionModal(false)}
         >
           <Pressable
-            className="bg-zinc-900 rounded-t-3xl px-6 pt-6 pb-10"
+            className="bg-[#05071A] rounded-t-3xl border-t-4 border-[#C8B6FF] px-6 pt-6 pb-10"
             onPress={(e) => e.stopPropagation()}
           >
             <View className="flex-row justify-between items-center mb-6">
@@ -184,8 +195,14 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity className="bg-white rounded-2xl py-4 px-4 mb-5">
-              <Text className="text-black text-center font-semibold">
+            <TouchableOpacity
+              className="bg-white/5 border border-white/10 rounded-2xl py-4 px-4 mb-5"
+              onPress={() => {
+                setShowCollectionModal(false);
+                setCreateCollectionModal(true);
+              }}
+            >
+              <Text className="text-[#EAE6FF] text-center font-semibold">
                 + Create New Collection
               </Text>
             </TouchableOpacity>
@@ -200,16 +217,34 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
               showsVerticalScrollIndicator={false}
               renderItem={({ item }) => (
                 <TouchableOpacity
-                  onPress={() => handleAddToCollection(item.id)}
-                  className="bg-zinc-800 rounded-2xl px-4 py-4 mb-3"
+                  onPress={() => handleAddToCollection(item.id, item.name)}
+                  className="bg-[#C8B6FF] rounded-2xl px-4 py-4 mb-3"
                 >
-                  <Text className="text-white text-base">{item.name}</Text>
+                  <Text className="text-[#1B1833] text-base font-semibold">
+                    {item.name}
+                  </Text>
                 </TouchableOpacity>
               )}
             />
           </Pressable>
         </Pressable>
       </Modal>
+
+      <CreateCollectionModal
+        visible={createCollectionModal}
+        collections={collections.map((item) => item.name)}
+        onClose={() => setCreateCollectionModal(false)}
+        onCreate={(name) => {
+          const newCollection = {
+            id: Date.now().toString(),
+            name,
+          };
+
+          setCollections((prev) => [...prev, newCollection]);
+
+          handleAddToCollection(newCollection.id, newCollection.name);
+        }}
+      />
     </>
   );
 }
