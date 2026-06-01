@@ -1,15 +1,17 @@
-### Overview
+# ✨ Quotes App
 
-This project is a React Native application built with a focus on performance, clean UI and modular architecture. It includes features like dynamic content rendering, custom styling using Tailwind CSS and optimized list handling.
+Discover inspiring quotes across spirituality, motivation, romance, humor, philosophy, politics and iconic movie & book moments.
+Built with React Native, featuring a clean UI, smooth performance and a scalable architecture.
 
-### Features
+## 🚀 Features
 
-* Dynamic UI with reusable components
-* Optimized list rendering using `FlatList`
-* Custom fonts integration
-* Background media support (images/videos)
-* Structured data handling using JSON
-* Scalable folder architecture
+* 🎲 Explore quotes with a single tap
+* ❤️ Save your favorite quotes
+* 📱 Clean and intuitive mobile experience
+* ⚡ Fast, lightweight and distraction-free
+* 🎨 Clean, dynamic UI
+* ♻️ Reusable components
+* 🖼️ Image & video backgrounds
 
 ### Tech Stack
 
