@@ -10,40 +10,24 @@ import {
   X,
 } from "lucide-react-native";
 
+import { supabase } from "@/lib/supabase";
+import { Quote } from "@/types/quote";
+import * as Sharing from "expo-sharing";
+import { useEffect, useRef, useState } from "react";
 import {
-  Text,
-  View,
+  FlatList,
   ImageBackground,
-  TouchableOpacity,
   Modal,
   Pressable,
-  FlatList,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
-
-import { useState, useRef } from "react";
 import ViewShot from "react-native-view-shot";
-import * as Sharing from "expo-sharing";
-
+import Toast from "react-native-toast-message";
 import CreateCollectionModal from "@/components/CreateCollectionModal";
 import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
-
-type Quote = {
-  id: string;
-  text: string;
-  source?: {
-    type?: string;
-    name?: string;
-    chapter?: number | string | null;
-    verse?: number | string | null;
-  };
-  tags?: string[];
-  language?: string;
-  metrics?: {
-    likes: number;
-    dislikes: number;
-  };
-};
 
 type Collection = {
   id: string;
@@ -58,27 +42,89 @@ type QuoteCardProps = {
 export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [createCollectionModal, setCreateCollectionModal] = useState(false);
-  const [collections, setCollections] = useState<Collection[]>([
-    { id: "1", name: "Motivation" },
-    { id: "2", name: "Life Lessons" },
-    { id: "3", name: "❤️ Favorites" },
-  ]);
-  
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const fetchCollections = async () => {
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) return;
+
+      const { data, error } = await supabase
+        .from("Collections")
+        .select("id, name")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) throw error;
+
+      setCollections(data || []);
+    } catch (error) {
+      console.error("Failed to fetch collections:", error);
+    }
+  };
+  useEffect(() => {
+    fetchCollections();
+  }, []);
   const { toggleTheme, theme } = useTheme();
   const colors = useThemeColors();
 
   const viewShotRef = useRef<ViewShot>(null);
 
-  const handleAddToCollection = (
+  const handleAddToCollection = async (
     collectionId: string,
     collectionName?: string,
   ) => {
-    console.log("Added quote:", quote.id);
-    console.log("Collection:", collectionId, collectionName);
+    try {
+      const { data: existing } = await supabase
+        .from("Collection_Quotes")
+        .select("quote_id")
+        .eq("collection_id", collectionId)
+        .eq("quote_id", quote.id)
+        .maybeSingle();
 
-    //! save logic here
+      if (existing) {
+        Toast.show({
+          type: "info",
+          text1: "Already in collection",
+          text2: `This quote is already in "${collectionName}"`,
+          position: "bottom",
+          visibilityTime: 2000,
+          bottomOffset: 20,
+        });
+        setShowCollectionModal(false);
+        return;
+      }
 
-    setShowCollectionModal(false);
+      const { error } = await supabase.from("Collection_Quotes").insert({
+        collection_id: collectionId,
+        quote_id: quote.id,
+      });
+
+      if (error) throw error;
+
+      Toast.show({
+        type: "success",
+        text1: "Quote saved!",
+        text2: `Added to "${collectionName}"`,
+        position: "bottom",
+        visibilityTime: 2000,
+        bottomOffset: 20,
+      });
+    } catch (err) {
+      console.error("Failed to add quote to collection:", err);
+      Toast.show({
+        type: "error",
+        text1: "Failed to save",
+        text2: "Something went wrong. Try again.",
+        position: "bottom",
+        visibilityTime: 2000,
+        bottomOffset: 20,
+      });
+    } finally {
+      setShowCollectionModal(false);
+    }
   };
 
   const shareImg = async () => {
@@ -95,90 +141,115 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
     }
   };
 
+  const [liked, setLiked] = useState(false);
+
+  const handleLike = async () => {
+    if (liked) return;
+
+    setLiked(true);
+
+    Toast.show({
+      type: "success",
+      text1: "Liked!",
+      position: "bottom",
+    });
+    await supabase.rpc("increment_quote_likes", {
+      quote_id_input: quote.id,
+    });
+  };
+
   return (
     <>
-      <ImageBackground
-        source={require("../assets/images/backgrounds/scroll-page-bg.webp")}
+      <ViewShot
+        ref={viewShotRef}
         style={{ flex: 1 }}
-        resizeMode="cover"
+        options={{
+          format: "png",
+          quality: 1,
+        }}
       >
-        <View className="flex-1 bg-black/40">
-          <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
-            <Link href="/profile">
-              <UserRound color="white" size={26} strokeWidth={1.5} />
-            </Link>
-
-            <TouchableOpacity onPress={onOpenFilter}>
-              <Funnel color="white" size={26} />
-            </TouchableOpacity>
-          </View>
-
-          <View className="flex-1 justify-center items-center px-12">
-            <ViewShot ref={viewShotRef} options={{ format: "png", quality: 1 }}>
-              <Text
-                style={{ fontFamily: "Inter_400Regular" }}
-                className="text-white text-center text-2xl leading-relaxed tracking-wide"
-              >
-                {quote.text}
-              </Text>
-
-              {(quote.source?.type === "gita" ||
-                quote.source?.type === "bible") && (
-                <View className="mt-8 items-center">
-                  <Text
-                    style={{ fontFamily: "Inter_300Light" }}
-                    className="text-white font-bold text-md"
-                  >
-                    {quote.source?.type?.toUpperCase()}{" "}
-                    {quote.source?.chapter != null &&
-                    quote.source?.verse != null
-                      ? `${quote.source.chapter}.${quote.source.verse}`
-                      : ""}
-                  </Text>
-                </View>
-              )}
-
-              {quote.source?.name &&
-                quote.source?.name !== "Bhagavad Gita" &&
-                quote.source?.name !== "Bible" && (
-                  <View className="mt-8 items-center">
-                    <Text
-                      style={{ fontFamily: "Inter_300Light" }}
-                      className="text-white text-md"
-                    >
-                      - {quote.source?.name}
-                    </Text>
-                  </View>
-                )}
-            </ViewShot>
-
-            <View className="flex-row gap-6 mt-12">
-              <Heart color="white" size={32} />
-
-              <TouchableOpacity onPress={() => setShowCollectionModal(true)}>
-                <Plus color="white" size={32} />
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
-            <Link href="/collection">
-              <Boxes color="white" size={26} strokeWidth={1.5} />
-            </Link>
-
-            <View className="gap-6">
-              <Link href="/community">
-                <Earth color="white" size={26} strokeWidth={1.5} />
+        <ImageBackground
+          source={require("../assets/images/backgrounds/scroll-page-bg.webp")}
+          style={{ flex: 1 }}
+          resizeMode="cover"
+        >
+          <View className="flex-1 bg-black/40">
+            <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
+              <Link href="/profile">
+                <UserRound color="white" size={26} strokeWidth={1.5} />
               </Link>
 
-              <TouchableOpacity onPress={shareImg}>
-                <Share color="white" size={26} strokeWidth={1.5} />
+              <TouchableOpacity onPress={onOpenFilter}>
+                <Funnel color="white" size={26} />
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </ImageBackground>
 
+            <View className="flex-1 justify-center items-center px-12">
+              <ViewShot
+                ref={viewShotRef}
+                options={{ format: "png", quality: 1 }}
+              >
+                <Text
+                  style={{ fontFamily: "Inter_400Regular" }}
+                  className="text-white text-center text-2xl leading-relaxed tracking-wide"
+                >
+                  {quote.quote}
+                </Text>
+
+                <View className="pt-8 items-center gap-4">
+                  <Text
+                    style={{ fontFamily: "Inter_300Light" }}
+                    className="text-white text-md"
+                  >
+                    - {quote.author}
+                  </Text>
+                  <Text
+                    style={{ fontFamily: "Inter_300Light" }}
+                    className="text-white text-sm border border-white px-2 rounded-full capitalize"
+                  >
+                    {quote.category}
+                  </Text>
+                </View>
+              </ViewShot>
+
+              <View className="flex-row gap-6 mt-12">
+                <TouchableOpacity onPress={handleLike}>
+                  <Heart
+                    size={32}
+                    color="white"
+                    fill={liked ? "white" : "transparent"}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={async () => {
+                    await fetchCollections();
+                    setShowCollectionModal(true);
+                  }}
+                >
+                  <Plus color="white" size={32} />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
+              <Link href="/collection">
+                <Boxes color="white" size={26} strokeWidth={1.5} />
+              </Link>
+
+              <View className="gap-6">
+                <Link href="/community">
+                  <Earth color="white" size={26} strokeWidth={1.5} />
+                </Link>
+
+                <TouchableOpacity onPress={shareImg}>
+                  <Share color="white" size={26} strokeWidth={1.5} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </ImageBackground>
+      </ViewShot>
       <Modal visible={showCollectionModal} transparent animationType="fade">
         <Pressable
           className="flex-1 bg-black/30 justify-end"
@@ -259,15 +330,30 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
         visible={createCollectionModal}
         collections={collections.map((item) => item.name)}
         onClose={() => setCreateCollectionModal(false)}
-        onCreate={(name) => {
-          const newCollection = {
-            id: Date.now().toString(),
-            name,
-          };
+        onCreate={async (name) => {
+          const {
+            data: { user },
+          } = await supabase.auth.getUser();
 
-          setCollections((prev) => [...prev, newCollection]);
+          if (!user) return;
 
-          handleAddToCollection(newCollection.id, newCollection.name);
+          const { data, error } = await supabase
+            .from("Collections")
+            .insert({
+              name,
+              user_id: user.id,
+            })
+            .select("id, name")
+            .single();
+
+          if (error) {
+            console.error(error);
+            throw error;
+          }
+
+          setCollections((prev) => [...prev, data]);
+
+          handleAddToCollection(data.id, data.name);
         }}
       />
     </>

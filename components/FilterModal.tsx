@@ -4,14 +4,14 @@ import { useThemeColors } from "@/hooks/useThemeColors";
 
 import { Modal, Text, TouchableOpacity, View } from "react-native";
 const GENRES = [
-  "Gita",
+  "Bhagavad Gita",
   "Bible",
   "Romance",
-  "Motivation",
+  "Motivational",
   "Humor",
   "Philosophical",
   "Political",
-  "Movie & Book",
+  "Movie",
 ];
 
 type Props = {

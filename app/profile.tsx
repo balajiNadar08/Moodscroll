@@ -5,15 +5,18 @@ import {
   TouchableOpacity,
   ScrollView,
   Modal,
+  ActivityIndicator,
 } from "react-native";
-import { Settings } from "lucide-react-native";
-import { Link } from "expo-router";
-import { useState } from "react";
+import { Settings, House } from "lucide-react-native";
+import { Link, useRouter } from "expo-router";
+import { useState, useEffect, useCallback } from "react";
 import EditProfile from "@/components/EditProfile";
 import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { supabase } from "@/lib/supabase";
+import { useFocusEffect } from "expo-router";
 
-type Profile = {
+type UserProfile = {
   username: string;
   bio: string;
   totalQuotes: number;
@@ -22,29 +25,109 @@ type Profile = {
   currentStreak: number;
   personalBest: number;
   interests: string[];
-  quotes: string[];
+  quotes: {
+    id: number;
+    text: string;
+    upvotes_count: number;
+    downvotes_count: number;
+  }[];
+  avatar: string | null;
 };
 
-const initialProfile: Profile = {
-  username: "Gojo",
-  bio: "Half philosopher, half disaster",
-  totalQuotes: 120,
-  followers: 340,
-  following: 180,
-  currentStreak: 12,
-  personalBest: 18,
-  interests: ["Sleeping", "Eating", "Reading", "Gaming"],
-  quotes: [
-    "Yes, they're sharing a drink called loneliness. But it's better than drinking alone.",
-    "Everyone believes in the world's greatest lie, even the person who lied.",
-  ],
+const defaultProfile: UserProfile = {
+  username: "",
+  bio: "",
+  totalQuotes: 0,
+  followers: 0,
+  following: 0,
+  currentStreak: 0,
+  personalBest: 0,
+  interests: [],
+  quotes: [],
+  avatar: null,
 };
 
 const Profile = () => {
-  const [profile, setProfile] = useState<Profile>(initialProfile);
+  const [profile, setProfile] = useState<UserProfile>(defaultProfile);
   const [showEditProfile, setShowEditProfile] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
   const { toggleTheme, theme } = useTheme();
   const colors = useThemeColors();
+  const router = useRouter();
+
+  const fetchProfile = async () => {
+    setLoading(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+      setUserId(user.id);
+
+      const { data, error } = await supabase
+        .from("User")
+        .select("username, avatar, interests")
+        .eq("id", user.id)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (!data) return;
+
+      const { data: quotesData } = await supabase
+        .from("Community_Quotes")
+        .select("id, quote, upvotes_count, downvotes_count")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      const quotes = (quotesData ?? []).map((q: any) => ({
+        id: q.id,
+        text: q.quote,
+        upvotes_count: q.upvotes_count ?? 0,
+        downvotes_count: q.downvotes_count ?? 0,
+      }));
+
+      setProfile((prev) => ({
+        ...prev,
+        username: data.username ?? "",
+        bio: prev.bio,
+        avatar: data.avatar ?? null,
+        interests: data.interests
+          ? data.interests
+              .split(",")
+              .map((s: string) => s.trim())
+              .filter(Boolean)
+          : [],
+        quotes,
+        totalQuotes: quotes.length,
+      }));
+    } catch (err) {
+      console.error("Failed to fetch profile:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchProfile();
+    }, []),
+  );
+
+  const avatarLetter = profile.username
+    ? profile.username[0].toUpperCase()
+    : "?";
+
+  if (loading) {
+    return (
+      <View
+        className="flex-1 items-center justify-center"
+        style={{ backgroundColor: colors.background }}
+      >
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
 
   return (
     <>
@@ -54,7 +137,10 @@ const Profile = () => {
         showsVerticalScrollIndicator={false}
       >
         <View className="px-6 pt-6 pb-10">
-          <View className="flex-1 items-end">
+          <View className="flex-row justify-between items-center">
+            <TouchableOpacity onPress={() => router.push("/")}>
+              <House color={colors.iconPrimary} size={26} strokeWidth={1.5} />
+            </TouchableOpacity>
             <Link href={"/settings"}>
               <Settings
                 color={colors.iconPrimary}
@@ -64,25 +150,40 @@ const Profile = () => {
             </Link>
           </View>
 
-          <View className="items-center">
-            <Image
-              source={require("../assets/images/profile-pic/pfp-1.webp")}
-              className="w-36 h-36 rounded-full border-4"
-              style={{ borderColor: colors.borderPrimary }}
-            />
-
+          <View className="items-center mt-4">
+            {profile.avatar ? (
+              <Image
+                source={{ uri: profile.avatar }}
+                className="w-36 h-36 rounded-full border-4"
+                style={{ borderColor: colors.borderPrimary }}
+              />
+            ) : (
+              <View
+                className="w-36 h-36 rounded-full border-4 items-center justify-center"
+                style={{
+                  borderColor: colors.borderPrimary,
+                  backgroundColor: colors.accent,
+                }}
+              >
+                <Text
+                  className="text-5xl font-bold"
+                  style={{ color: colors.background }}
+                >
+                  {avatarLetter}
+                </Text>
+              </View>
+            )}
             <Text
               className="text-4xl font-bold mt-6"
               style={{ color: colors.textPrimary }}
             >
-              {profile.username}
+              {profile.username || "No username"}
             </Text>
-
             <Text
               className="text-lg italic mt-2"
               style={{ color: colors.textSecondary }}
             >
-              {profile.bio}
+              {profile.bio || "No bio yet"}
             </Text>
           </View>
 
@@ -101,12 +202,10 @@ const Profile = () => {
                 Posts
               </Text>
             </View>
-
             <View
               className="w-[1px]"
               style={{ backgroundColor: colors.borderSecondary }}
             />
-
             <View className="items-center flex-1">
               <Text className="text-md" style={{ color: colors.textPrimary }}>
                 {profile.followers}
@@ -118,14 +217,11 @@ const Profile = () => {
                 Followers
               </Text>
             </View>
-
             <View
               className="w-[1px]"
               style={{ backgroundColor: colors.borderSecondary }}
             />
-
             <View className="items-center flex-1">
-              {/* ✅ Fix: was hardcoded text-[#F4F1FF] */}
               <Text className="text-md" style={{ color: colors.textPrimary }}>
                 {profile.following}
               </Text>
@@ -168,7 +264,6 @@ const Profile = () => {
               style={{ backgroundColor: colors.accent + "1A" }}
             />
             <View className="absolute inset-0 bg-white/5 backdrop-blur-xl" />
-
             <Text
               className="text-xl font-semibold mb-6"
               style={{ color: colors.textPrimary }}
@@ -179,7 +274,6 @@ const Profile = () => {
                 (in days)
               </Text>
             </Text>
-
             <View className="flex-row justify-around items-center">
               <View className="items-center">
                 <View
@@ -208,12 +302,10 @@ const Profile = () => {
                   Current
                 </Text>
               </View>
-
               <View
                 className="w-[1px] h-24"
                 style={{ backgroundColor: colors.borderSecondary }}
               />
-
               <View className="items-center">
                 <View
                   className="w-24 h-24 rounded-full items-center justify-center"
@@ -255,24 +347,30 @@ const Profile = () => {
               My Interests
             </Text>
             <View className="flex-row flex-wrap gap-4">
-              {profile.interests.map((interest, index) => (
-                <View
-                  key={index}
-                  className="px-6 py-2 rounded-full"
-                  style={{
-                    backgroundColor: colors.cardSecondary,
-                    borderWidth: 1,
-                    borderColor: colors.borderSecondary,
-                  }}
-                >
-                  <Text
-                    className="text-md"
-                    style={{ color: colors.textPrimary }}
+              {profile.interests.length === 0 ? (
+                <Text style={{ color: colors.textSecondary }}>
+                  No interests added yet
+                </Text>
+              ) : (
+                profile.interests.map((interest, index) => (
+                  <View
+                    key={index}
+                    className="px-6 py-2 rounded-full"
+                    style={{
+                      backgroundColor: colors.cardSecondary,
+                      borderWidth: 1,
+                      borderColor: colors.borderSecondary,
+                    }}
                   >
-                    {interest}
-                  </Text>
-                </View>
-              ))}
+                    <Text
+                      className="text-md"
+                      style={{ color: colors.textPrimary }}
+                    >
+                      {interest}
+                    </Text>
+                  </View>
+                ))
+              )}
             </View>
           </View>
 
@@ -292,7 +390,6 @@ const Profile = () => {
               >
                 Community Posts
               </Text>
-
               <View
                 className="px-3 py-1 rounded-full"
                 style={{
@@ -307,49 +404,60 @@ const Profile = () => {
               </View>
             </View>
 
-            {profile.quotes.map((quote, index) => (
-              <View
-                key={index}
-                className="rounded-3xl p-5 mb-5 overflow-hidden"
-                style={{
-                  backgroundColor: colors.card,
-                  borderWidth: 1,
-                  borderColor: colors.borderSecondary,
-                }}
-              >
-                <View className="absolute inset-0 bg-white/5 backdrop-blur-lg" />
-
-                <Text
-                  className="text-3xl leading-none"
-                  style={{ color: colors.accent }}
+            {profile.quotes.length === 0 ? (
+              <Text style={{ color: colors.textSecondary }}>No posts yet</Text>
+            ) : (
+              profile.quotes.map((quote, index) => (
+                <View
+                  key={quote.id}
+                  className="rounded-3xl p-5 mb-5 overflow-hidden"
+                  style={{
+                    backgroundColor: colors.card,
+                    borderWidth: 1,
+                    borderColor: colors.borderSecondary,
+                  }}
                 >
-                  "
-                </Text>
-                <Text
-                  className="text-[15px] leading-7 italic"
-                  style={{ color: colors.textPrimary }}
-                >
-                  {quote}
-                </Text>
-
-                <View className="flex-row items-center mt-5">
-                  <View
-                    className="flex-1 h-[1px]"
-                    style={{ backgroundColor: colors.borderSecondary }}
-                  />
+                  <View className="absolute inset-0 bg-white/5 backdrop-blur-lg" />
                   <Text
-                    className="text-xs mx-3"
+                    className="text-3xl leading-none"
+                    style={{ color: colors.accent }}
+                  >
+                    "
+                  </Text>
+                  <Text
+                    className="text-[15px] leading-7 italic"
+                    style={{ color: colors.textPrimary }}
+                  >
+                    {quote.text}
+                  </Text>
+                  <View className="flex-row items-center justify-between mt-4">
+                    <View className="flex-row items-center mt-1">
+                      <View
+                        className="flex-1 h-[1px]"
+                        style={{ backgroundColor: colors.borderSecondary }}
+                      />
+                      <Text
+                        className="text-xs mx-3"
+                        style={{ color: colors.textSecondary }}
+                      >
+                        Quote #{index + 1}
+                      </Text>
+                      <View
+                        className="flex-1 h-[1px]"
+                        style={{ backgroundColor: colors.borderSecondary }}
+                      />
+                    </View>
+                  </View>
+                  <Text
+                    className="text-xs mt-3 text-right"
                     style={{ color: colors.textSecondary }}
                   >
-                    Quote #{index + 1}
+                    {quote.upvotes_count - quote.downvotes_count > 0 ? "+" : ""}
+                    {quote.upvotes_count - quote.downvotes_count} votes
                   </Text>
-                  <View
-                    className="flex-1 h-[1px]"
-                    style={{ backgroundColor: colors.borderSecondary }}
-                  />
                 </View>
-              </View>
-            ))}
+              ))
+            )}
           </View>
         </View>
       </ScrollView>
@@ -359,7 +467,11 @@ const Profile = () => {
           <EditProfile
             profile={profile}
             onUpdateProfile={setProfile}
-            onClose={() => setShowEditProfile(false)}
+            onClose={() => {
+              setShowEditProfile(false);
+              fetchProfile();
+            }}
+            userId={userId}
           />
         </View>
       </Modal>

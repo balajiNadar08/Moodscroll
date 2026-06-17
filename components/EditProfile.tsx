@@ -1,35 +1,26 @@
+import { useThemeColors } from "@/hooks/useThemeColors";
+import { supabase } from "@/lib/supabase";
 import * as ImagePicker from "expo-image-picker";
+import { ArrowLeft } from "lucide-react-native";
 import React, { useState } from "react";
 import {
+  ActivityIndicator,
   Alert,
   Image,
   KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
-  StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { ArrowLeft } from "lucide-react-native";
-import { useTheme } from "@/context/ThemeContext";
-import { useThemeColors } from "@/hooks/useThemeColors";
 
-type PasswordVisibility = {
-  old: boolean;
-  new: boolean;
-  confirm: boolean;
-};
+type PasswordVisibility = { old: boolean; new: boolean; confirm: boolean };
+type PasswordFields = { old: string; new: string; confirm: string };
 
-type PasswordFields = {
-  old: string;
-  new: string;
-  confirm: string;
-};
-
-type Profile = {
+type UserProfile = {
   username: string;
   bio: string;
   totalQuotes: number;
@@ -38,26 +29,30 @@ type Profile = {
   currentStreak: number;
   personalBest: number;
   interests: string[];
-  quotes: string[];
+  quotes: {
+    id: number;
+    text: string;
+    upvotes_count: number;
+    downvotes_count: number;
+  }[];
+  avatar: string | null;
 };
 
 type EditProfileProps = {
-  profile: Profile;
-  onUpdateProfile: React.Dispatch<React.SetStateAction<Profile>>;
+  profile: UserProfile;
+  onUpdateProfile: React.Dispatch<React.SetStateAction<UserProfile>>;
   onClose: () => void;
+  userId: string | null;
 };
 
 const EditProfile: React.FC<EditProfileProps> = ({
   profile,
   onUpdateProfile,
   onClose,
+  userId,
 }) => {
-  const [profilePhoto, setProfilePhoto] = useState<string>(
-    "https://i.pravatar.cc/150?img=3",
-  );
   const [interestInput, setInterestInput] = useState("");
-  const [passwordModalVisible, setPasswordModalVisible] =
-    useState<boolean>(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
   const [passwords, setPasswords] = useState<PasswordFields>({
     old: "",
     new: "",
@@ -68,22 +63,73 @@ const EditProfile: React.FC<EditProfileProps> = ({
     new: false,
     confirm: false,
   });
-  const [passwordError, setPasswordError] = useState<string>("");
-  const { toggleTheme, theme } = useTheme();
+  const [passwordError, setPasswordError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const colors = useThemeColors();
+
+  const avatarLetter = profile.username
+    ? profile.username[0].toUpperCase()
+    : "?";
+
+  const handlePickImage = async () => {
+    if (!userId) return;
+
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert(
+        "Permission Denied",
+        "Allow access to photos to change your profile picture.",
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+    });
+
+    if (result.canceled) return;
+
+    try {
+      setUploading(true);
+      const uri = result.assets[0].uri;
+      const ext = uri.split(".").pop() ?? "jpg";
+      const fileName = `${userId}/avatar.${ext}`;
+      const contentType = `image/${ext}`;
+
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from("avatars")
+        .upload(fileName, blob, { contentType, upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("avatars").getPublicUrl(fileName);
+
+      const avatarUrl = `${publicUrl}?t=${Date.now()}`;
+
+      onUpdateProfile((prev) => ({ ...prev, avatar: avatarUrl }));
+    } catch (err: any) {
+      Alert.alert("Upload failed", err.message ?? "Something went wrong");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const addInterest = () => {
     const trimmed = interestInput.trim();
-
-    if (!trimmed) return;
-
-    if (profile.interests.includes(trimmed)) return;
-
+    if (!trimmed || profile.interests.includes(trimmed)) return;
     onUpdateProfile((prev) => ({
       ...prev,
       interests: [...prev.interests, trimmed],
     }));
-
     setInterestInput("");
   };
 
@@ -94,23 +140,27 @@ const EditProfile: React.FC<EditProfileProps> = ({
     }));
   };
 
-  const handlePickImage = async (): Promise<void> => {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== "granted") {
-      Alert.alert(
-        "Permission Denied",
-        "Allow access to photos to change your profile picture.",
-      );
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (!result.canceled) {
-      setProfilePhoto(result.assets[0].uri);
+  const handleSave = async () => {
+    if (!userId) return;
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from("User")
+        .update({
+          username: profile.username,
+          interests: profile.interests.join(", "),
+          avatar: profile.avatar,
+        })
+        .eq("id", userId);
+
+      if (error) throw error;
+
+      Alert.alert("Success", "Profile updated successfully!");
+      onClose();
+    } catch (err: any) {
+      Alert.alert("Save failed", err.message ?? "Something went wrong");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -126,7 +176,7 @@ const EditProfile: React.FC<EditProfileProps> = ({
     return null;
   };
 
-  const handlePasswordChange = (): void => {
+  const handlePasswordChange = async () => {
     if (!passwords.old) {
       setPasswordError("Please enter your current password.");
       return;
@@ -144,13 +194,22 @@ const EditProfile: React.FC<EditProfileProps> = ({
       setPasswordError("New password must be different from old password.");
       return;
     }
-    setPasswordError("");
-    setPasswords({ old: "", new: "", confirm: "" });
-    setPasswordModalVisible(false);
-    Alert.alert("Success", "Password changed successfully!");
+
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: passwords.new,
+      });
+      if (error) throw error;
+      setPasswordError("");
+      setPasswords({ old: "", new: "", confirm: "" });
+      setPasswordModalVisible(false);
+      Alert.alert("Success", "Password changed successfully!");
+    } catch (err: any) {
+      setPasswordError(err.message ?? "Failed to change password");
+    }
   };
 
-  const handleCloseModal = (): void => {
+  const handleCloseModal = () => {
     setPasswordModalVisible(false);
     setPasswords({ old: "", new: "", confirm: "" });
     setPasswordError("");
@@ -183,7 +242,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
           >
             <ArrowLeft size={20} color={colors.textPrimary} />
           </TouchableOpacity>
-
           <Text
             className="text-[24px] font-bold ml-4"
             style={{ color: colors.textPrimary }}
@@ -193,27 +251,39 @@ const EditProfile: React.FC<EditProfileProps> = ({
         </View>
 
         <View className="items-center mb-8">
-          <Image
-            source={{ uri: profilePhoto }}
-            className="w-[110px] h-[110px] rounded-full border-[3px] mb-3"
-            style={{ borderColor: colors.borderPrimary }}
-          />
-
-          <TouchableOpacity
-            className="py-1.5 px-4 rounded-full"
-            style={{
-              borderWidth: 1.5,
-              borderColor: colors.borderPrimary,
-            }}
-            onPress={handlePickImage}
-          >
-            <Text
-              className="text-sm font-semibold"
-              style={{ color: colors.accent }}
+          {uploading ? (
+            <View
+              className="w-[110px] h-[110px] rounded-full items-center justify-center"
+              style={{
+                backgroundColor: colors.card,
+                borderWidth: 3,
+                borderColor: colors.borderPrimary,
+              }}
             >
-              Change Profile Photo
-            </Text>
-          </TouchableOpacity>
+              <ActivityIndicator color={colors.accent} />
+            </View>
+          ) : profile.avatar ? (
+            <Image
+              source={{ uri: profile.avatar }}
+              className="w-[110px] h-[110px] rounded-full border-[3px] mb-3"
+              style={{ borderColor: colors.borderPrimary }}
+            />
+          ) : (
+            <View
+              className="w-[110px] h-[110px] rounded-full border-[3px] mb-3 items-center justify-center"
+              style={{
+                borderColor: colors.borderPrimary,
+                backgroundColor: colors.accent,
+              }}
+            >
+              <Text
+                className="text-4xl font-bold"
+                style={{ color: colors.background }}
+              >
+                {avatarLetter}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View className="mb-5">
@@ -223,7 +293,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
           >
             Username
           </Text>
-
           <TextInput
             className="rounded-xl px-4 py-3 text-[15px]"
             style={{
@@ -234,10 +303,7 @@ const EditProfile: React.FC<EditProfileProps> = ({
             }}
             value={profile.username}
             onChangeText={(text) =>
-              onUpdateProfile((prev) => ({
-                ...prev,
-                username: text,
-              }))
+              onUpdateProfile((prev) => ({ ...prev, username: text }))
             }
             placeholder="Enter new username"
             placeholderTextColor={colors.textSecondary}
@@ -252,15 +318,11 @@ const EditProfile: React.FC<EditProfileProps> = ({
           >
             Bio
           </Text>
-
           <TextInput
             multiline
             value={profile.bio}
             onChangeText={(text) =>
-              onUpdateProfile((prev) => ({
-                ...prev,
-                bio: text,
-              }))
+              onUpdateProfile((prev) => ({ ...prev, bio: text }))
             }
             placeholder="Tell people about yourself..."
             placeholderTextColor={colors.textSecondary}
@@ -282,7 +344,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
           >
             Interests
           </Text>
-
           <View className="flex-row gap-2">
             <TextInput
               value={interestInput}
@@ -297,7 +358,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
                 color: colors.textPrimary,
               }}
             />
-
             <TouchableOpacity
               onPress={addInterest}
               className="px-5 rounded-xl justify-center"
@@ -311,7 +371,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
               </Text>
             </TouchableOpacity>
           </View>
-
           <View className="flex-row flex-wrap gap-2 mt-4">
             {profile.interests.map((interest) => (
               <TouchableOpacity
@@ -332,10 +391,7 @@ const EditProfile: React.FC<EditProfileProps> = ({
 
         <TouchableOpacity
           className="mt-2 mb-7 py-3 rounded-xl items-center"
-          style={{
-            borderWidth: 1.5,
-            borderColor: colors.textTertiary,
-          }}
+          style={{ borderWidth: 1.5, borderColor: colors.textTertiary }}
           onPress={() => setPasswordModalVisible(true)}
         >
           <Text
@@ -348,23 +404,23 @@ const EditProfile: React.FC<EditProfileProps> = ({
 
         <TouchableOpacity
           className="py-4 rounded-[14px] items-center"
-          style={{ backgroundColor: colors.accent }}
-          onPress={() => {
-            Alert.alert("Success", "Profile updated successfully!");
-            onClose();
+          style={{
+            backgroundColor: saving ? colors.borderSecondary : colors.accent,
           }}
+          onPress={handleSave}
+          disabled={saving}
         >
           <Text
             className="text-base font-bold tracking-[0.5px]"
             style={{ color: colors.cardSecondary }}
           >
-            Save Changes
+            {saving ? "Saving..." : "Save Changes"}
           </Text>
         </TouchableOpacity>
 
         <Modal
           visible={passwordModalVisible}
-          transparent={true}
+          transparent
           animationType="slide"
           onRequestClose={handleCloseModal}
         >
@@ -404,7 +460,7 @@ const EditProfile: React.FC<EditProfileProps> = ({
                       placeholderTextColor={colors.textSecondary}
                       secureTextEntry={!showPassword[field]}
                       value={passwords[field]}
-                      onChangeText={(text: string) => {
+                      onChangeText={(text) => {
                         setPasswords((prev) => ({ ...prev, [field]: text }));
                         setPasswordError("");
                       }}
@@ -458,7 +514,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
                     Cancel
                   </Text>
                 </TouchableOpacity>
-
                 <TouchableOpacity
                   className="flex-1 py-3 rounded-xl items-center"
                   style={{ backgroundColor: colors.accent }}
