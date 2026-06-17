@@ -127,7 +127,7 @@ const Settings = () => {
       <View className="px-5 mb-8">
         <SectionTitle title="SUPPORT US" />
         <View className="gap-3">
-          <SettingRow title="Give Feedback" href={"/settings"} />
+          <SettingRow title="Give Feedback" href={"/settings/feedback"} />
           <SettingRow title="Report Bug" href={"/settings"} />
         </View>
       </View>
@@ -135,7 +135,7 @@ const Settings = () => {
       <View className="px-5 mb-8">
         <SectionTitle title="ACCOUNT" />
         <View className="gap-3">
-          <SettingRow title="Logout" href={"/settings"} danger />
+          <SettingRow title="Authentication" href={"/register"} danger />
         </View>
       </View>
 

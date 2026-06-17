@@ -1,15 +1,15 @@
-import { View, Text, TouchableOpacity, TextInput, Modal } from "react-native";
-import { useEffect, useState } from "react";
-import Toast from "react-native-toast-message";
-import { router } from "expo-router";
 import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { Modal, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Toast from "react-native-toast-message";
 
 type CreateCollectionModalProps = {
   visible: boolean;
   collections: string[];
   onClose: () => void;
-  onCreate: (name: string) => void;
+  onCreate: (name: string) => Promise<void>;
 };
 
 const CreateCollectionModal = ({
@@ -30,7 +30,7 @@ const CreateCollectionModal = ({
     }
   }, [visible]);
 
-  const createCollection = () => {
+  const createCollection = async () => {
     const trimmedName = newName.trim();
 
     if (!trimmedName) return;
@@ -44,7 +44,7 @@ const CreateCollectionModal = ({
       return;
     }
 
-    onCreate(trimmedName);
+    await onCreate(trimmedName);
 
     setNewName("");
     setError(false);
