@@ -14,6 +14,7 @@ import { supabase } from "@/lib/supabase";
 import { Quote } from "@/types/quote";
 import * as Sharing from "expo-sharing";
 import { useEffect, useRef, useState } from "react";
+import { router } from "expo-router";
 import {
   FlatList,
   ImageBackground,
@@ -43,6 +44,27 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [createCollectionModal, setCreateCollectionModal] = useState(false);
   const [collections, setCollections] = useState<Collection[]>([]);
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      setUser(user);
+    };
+
+    getUser();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
   const fetchCollections = async () => {
     try {
       const {
@@ -144,18 +166,20 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
   const [liked, setLiked] = useState(false);
 
   const handleLike = async () => {
-    if (liked) return;
+    if (liked) {
+      setLiked(false);
 
-    setLiked(true);
+      await supabase.rpc("decrement_quote_likes", {
+        quote_id_input: quote.id,
+      });
+      
+    } else {
+      setLiked(true);
 
-    Toast.show({
-      type: "success",
-      text1: "Liked!",
-      position: "bottom",
-    });
-    await supabase.rpc("increment_quote_likes", {
-      quote_id_input: quote.id,
-    });
+      await supabase.rpc("increment_quote_likes", {
+        quote_id_input: quote.id,
+      });
+    }
   };
 
   return (
@@ -212,7 +236,7 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
                 </View>
               </ViewShot>
 
-              <View className="flex-row gap-6 mt-12">
+              <View className="flex-row gap-6 pt-12">
                 <TouchableOpacity onPress={handleLike}>
                   <Heart
                     size={32}
@@ -263,7 +287,7 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
             }}
             onPress={(e) => e.stopPropagation()}
           >
-            <View className="flex-row justify-between items-center mb-6">
+            <View className="flex-row justify-between items-center pb-6">
               <Text
                 className="text-xl font-semibold"
                 style={{ color: colors.textPrimary }}
@@ -284,6 +308,12 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
                 borderColor: colors.borderSecondary,
               }}
               onPress={() => {
+                if (!user) {
+                  setShowCollectionModal(false);
+                  router.push("/settings");
+                  return;
+                }
+
                 setShowCollectionModal(false);
                 setCreateCollectionModal(true);
               }}
@@ -292,7 +322,7 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
                 className="text-center font-semibold"
                 style={{ color: colors.textPrimary }}
               >
-                + Create New Collection
+                {user ? "+ Create New Collection" : "Login/Register to Save"}
               </Text>
             </TouchableOpacity>
 

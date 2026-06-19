@@ -9,12 +9,13 @@ import {
 } from "react-native";
 import { Settings, House } from "lucide-react-native";
 import { Link, useRouter } from "expo-router";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import EditProfile from "@/components/EditProfile";
 import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type UserProfile = {
   username: string;
@@ -52,6 +53,7 @@ const Profile = () => {
   const [showEditProfile, setShowEditProfile] = useState(false);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const { toggleTheme, theme } = useTheme();
   const colors = useThemeColors();
   const router = useRouter();
@@ -62,7 +64,14 @@ const Profile = () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+
+      if (!user) {
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsLoggedIn(true);
       setUserId(user.id);
 
       const { data, error } = await supabase
@@ -86,12 +95,13 @@ const Profile = () => {
         upvotes_count: q.upvotes_count ?? 0,
         downvotes_count: q.downvotes_count ?? 0,
       }));
+      const localAvatar = await AsyncStorage.getItem("profileImage");
 
       setProfile((prev) => ({
         ...prev,
         username: data.username ?? "",
         bio: prev.bio,
-        avatar: data.avatar ?? null,
+        avatar: localAvatar || data.avatar || null,
         interests: data.interests
           ? data.interests
               .split(",")
@@ -234,18 +244,33 @@ const Profile = () => {
             </View>
           </View>
 
-          <TouchableOpacity
-            onPress={() => setShowEditProfile(true)}
-            className="rounded-full py-4 mt-8"
-            style={{ backgroundColor: colors.accent }}
-          >
-            <Text
-              className="text-center text-md font-semibold"
-              style={{ color: colors.textPrimary }}
+          {isLoggedIn ? (
+            <TouchableOpacity
+              onPress={() => setShowEditProfile(true)}
+              className="rounded-full py-4 mt-8"
+              style={{ backgroundColor: colors.accent }}
             >
-              Edit Profile
-            </Text>
-          </TouchableOpacity>
+              <Text
+                className="text-center text-md font-semibold"
+                style={{ color: colors.textPrimary }}
+              >
+                Edit Profile
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              onPress={() => router.push("/settings")}
+              className="rounded-full py-4 mt-8"
+              style={{ backgroundColor: colors.accent }}
+            >
+              <Text
+                className="text-center text-md font-semibold"
+                style={{ color: colors.textPrimary }}
+              >
+                Register / Login
+              </Text>
+            </TouchableOpacity>
+          )}
 
           <View
             className="rounded-xl p-6 mt-10 overflow-hidden"

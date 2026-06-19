@@ -2,13 +2,12 @@ import CreateCollectionModal from "@/components/CreateCollectionModal";
 import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { supabase } from "@/lib/supabase";
-import { useFocusEffect } from "expo-router";
+import { useFocusEffect, useRouter } from "expo-router";
 import { Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
-  FlatList,
   Text,
   TouchableOpacity,
   View,
@@ -33,9 +32,11 @@ const Collection = () => {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [modalVisible, setModalVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
   const { toggleTheme, theme } = useTheme();
   const colors = useThemeColors();
+  const router = useRouter();
 
   const fetchCollections = async () => {
     setLoading(true);
@@ -43,7 +44,14 @@ const Collection = () => {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) return;
+
+      if (!user) {
+        setIsLoggedIn(false);
+        setLoading(false);
+        return;
+      }
+
+      setIsLoggedIn(true);
 
       const { data, error } = await supabase
         .from("Collections")
@@ -138,12 +146,9 @@ const Collection = () => {
         .select("quote_id")
         .eq("collection_id", id);
 
-      console.log("CQ DATA:", cqData);
-      console.log("CQ ERROR:", cqError);
       if (cqError) throw cqError;
 
       const quoteIds = (cqData ?? []).map((row) => row.quote_id);
-      console.log("QUOTE IDS:", quoteIds);
       if (quoteIds.length === 0) {
         setCollections((prev) =>
           prev.map((c) =>
@@ -157,9 +162,6 @@ const Collection = () => {
         .from("Quotes")
         .select("id, quote, author")
         .in("id", quoteIds);
-
-      console.log("QUOTES DATA:", quotesData);
-      console.log("QUOTES ERROR:", quotesError);
 
       if (quotesError) throw quotesError;
 
@@ -185,6 +187,41 @@ const Collection = () => {
         style={{ backgroundColor: colors.background }}
       >
         <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
+  // — Not logged in —
+  if (!isLoggedIn) {
+    return (
+      <View
+        className="flex-1 items-center justify-center px-10"
+        style={{ backgroundColor: colors.background }}
+      >
+        <Text
+          className="text-2xl font-bold mb-3 text-center"
+          style={{ color: colors.textPrimary }}
+        >
+          Collections
+        </Text>
+        <Text
+          className="text-base text-center opacity-60 mb-8"
+          style={{ color: colors.textSecondary }}
+        >
+          You need to be logged in to create and view your collections.
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.push("/settings")}
+          className="rounded-full px-10 py-4"
+          style={{ backgroundColor: colors.accent }}
+        >
+          <Text
+            className="text-base font-semibold"
+            style={{ color: colors.background }}
+          >
+            Register / Login
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   }
@@ -272,7 +309,7 @@ const Collection = () => {
                       style={{ marginTop: 16 }}
                     />
                   ) : item.quotes && item.quotes.length > 0 ? (
-                    item.quotes.map((q, index) => (
+                    item.quotes.map((q) => (
                       <View
                         key={q.id}
                         className="mt-4 rounded-xl p-4"
@@ -320,19 +357,34 @@ const Collection = () => {
       )}
 
       {!modalVisible && (
-        <TouchableOpacity
-          onPress={() => setModalVisible(true)}
-          className="absolute bottom-10 left-6 right-6 py-4 rounded-2xl items-center flex-row justify-center"
-          style={{ backgroundColor: colors.accent }}
-        >
-          <Plus color={colors.iconPrimary} size={20} />
-          <Text
-            className="text-base font-medium ml-2"
-            style={{ color: colors.background }}
+        isLoggedIn ? (
+          <TouchableOpacity
+            onPress={() => setModalVisible(true)}
+            className="absolute bottom-10 left-6 right-6 py-4 rounded-2xl items-center flex-row justify-center"
+            style={{ backgroundColor: colors.accent }}
           >
-            Create Collection
-          </Text>
-        </TouchableOpacity>
+            <Plus color={colors.iconPrimary} size={20} />
+            <Text
+              className="text-base font-medium ml-2"
+              style={{ color: colors.background }}
+            >
+              Create Collection
+            </Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={() => router.push("/settings")}
+            className="absolute bottom-10 left-6 right-6 py-4 rounded-2xl items-center flex-row justify-center"
+            style={{ backgroundColor: colors.accent }}
+          >
+            <Text
+              className="text-base font-medium"
+              style={{ color: colors.background }}
+            >
+              Login / Register to save
+            </Text>
+          </TouchableOpacity>
+        )
       )}
 
       <CreateCollectionModal
