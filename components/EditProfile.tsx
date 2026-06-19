@@ -1,5 +1,6 @@
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { supabase } from "@/lib/supabase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as ImagePicker from "expo-image-picker";
 import { ArrowLeft } from "lucide-react-native";
 import React, { useState } from "react";
@@ -73,9 +74,8 @@ const EditProfile: React.FC<EditProfileProps> = ({
     : "?";
 
   const handlePickImage = async () => {
-    if (!userId) return;
-
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
     if (status !== "granted") {
       Alert.alert(
         "Permission Denied",
@@ -87,7 +87,7 @@ const EditProfile: React.FC<EditProfileProps> = ({
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
       allowsEditing: true,
-      aspect: [1, 1],
+      aspect: [1, 1], 
       quality: 0.7,
     });
 
@@ -95,29 +95,17 @@ const EditProfile: React.FC<EditProfileProps> = ({
 
     try {
       setUploading(true);
-      const uri = result.assets[0].uri;
-      const ext = uri.split(".").pop() ?? "jpg";
-      const fileName = `${userId}/avatar.${ext}`;
-      const contentType = `image/${ext}`;
 
-      const response = await fetch(uri);
-      const blob = await response.blob();
+      const imageUri = result.assets[0].uri;
 
-      const { error: uploadError } = await supabase.storage
-        .from("avatars")
-        .upload(fileName, blob, { contentType, upsert: true });
+      await AsyncStorage.setItem("profileImage", imageUri);
 
-      if (uploadError) throw uploadError;
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("avatars").getPublicUrl(fileName);
-
-      const avatarUrl = `${publicUrl}?t=${Date.now()}`;
-
-      onUpdateProfile((prev) => ({ ...prev, avatar: avatarUrl }));
+      onUpdateProfile((prev) => ({
+        ...prev,
+        avatar: imageUri,
+      }));
     } catch (err: any) {
-      Alert.alert("Upload failed", err.message ?? "Something went wrong");
+      Alert.alert("Error", err.message ?? "Something went wrong");
     } finally {
       setUploading(false);
     }
@@ -149,7 +137,6 @@ const EditProfile: React.FC<EditProfileProps> = ({
         .update({
           username: profile.username,
           interests: profile.interests.join(", "),
-          avatar: profile.avatar,
         })
         .eq("id", userId);
 
@@ -251,39 +238,54 @@ const EditProfile: React.FC<EditProfileProps> = ({
         </View>
 
         <View className="items-center mb-8">
-          {uploading ? (
-            <View
-              className="w-[110px] h-[110px] rounded-full items-center justify-center"
-              style={{
-                backgroundColor: colors.card,
-                borderWidth: 3,
-                borderColor: colors.borderPrimary,
-              }}
-            >
-              <ActivityIndicator color={colors.accent} />
-            </View>
-          ) : profile.avatar ? (
-            <Image
-              source={{ uri: profile.avatar }}
-              className="w-[110px] h-[110px] rounded-full border-[3px] mb-3"
-              style={{ borderColor: colors.borderPrimary }}
-            />
-          ) : (
-            <View
-              className="w-[110px] h-[110px] rounded-full border-[3px] mb-3 items-center justify-center"
-              style={{
-                borderColor: colors.borderPrimary,
-                backgroundColor: colors.accent,
-              }}
-            >
-              <Text
-                className="text-4xl font-bold"
-                style={{ color: colors.background }}
+          <TouchableOpacity onPress={handlePickImage}>
+            {uploading ? (
+              <View
+                className="w-[110px] h-[110px] rounded-full items-center justify-center"
+                style={{
+                  backgroundColor: colors.card,
+                  borderWidth: 3,
+                  borderColor: colors.borderPrimary,
+                }}
               >
-                {avatarLetter}
-              </Text>
-            </View>
-          )}
+                <ActivityIndicator color={colors.accent} />
+              </View>
+            ) : profile.avatar ? (
+              <Image
+                source={{ uri: profile.avatar }}
+                className="w-[110px] h-[110px] rounded-full border-[3px]"
+                style={{ borderColor: colors.borderPrimary }}
+              />
+            ) : (
+              <View
+                className="w-[110px] h-[110px] rounded-full border-[3px] items-center justify-center"
+                style={{
+                  borderColor: colors.borderPrimary,
+                  backgroundColor: colors.accent,
+                }}
+              >
+                <Text
+                  className="text-4xl font-bold"
+                  style={{ color: colors.background }}
+                >
+                  {avatarLetter}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handlePickImage}
+            className="mt-3 px-4 py-2 rounded-full"
+            style={{ backgroundColor: colors.accent }}
+          >
+            <Text
+              className="font-semibold"
+              style={{ color: colors.cardSecondary }}
+            >
+              Change Photo
+            </Text>
+          </TouchableOpacity>
         </View>
 
         <View className="mb-5">

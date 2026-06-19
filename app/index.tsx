@@ -165,7 +165,7 @@ if (showLanding) {
         <Text className="text-white">No quotes found.</Text>
 
         <Text
-          className="text-gray-400 mt-4"
+          className="text-gray-400 pt-4"
           onPress={() => setIsFilterOpen(true)}
         >
           Adjust filters

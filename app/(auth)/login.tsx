@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useThemeColors } from "@/hooks/useThemeColors";
+import { supabase } from "@/lib/supabase";
 
 interface LoginProps {
   onLogin?: (email: string, password: string) => void;
@@ -16,13 +18,37 @@ interface LoginProps {
 export default function Login({ onLogin }: LoginProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const colors = useThemeColors();
+  const router = useRouter();
 
-  function handleLogin() {
-    onLogin?.(email, password);
-    console.log("Login:", email, password);
-  }
+  const handleLogin = async () => {
+    setError(null);
+    setSuccess(false);
+
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setSuccess(true);
+      onLogin?.(email, password);
+
+      setTimeout(() => {
+        router.replace("/profile");
+      }, 1500);
+    } catch (err: any) {
+      setError(err.message ?? "Something went wrong");
+    }
+  };
 
   return (
     <KeyboardAvoidingView
@@ -80,16 +106,32 @@ export default function Login({ onLogin }: LoginProps) {
           secureTextEntry
         />
 
+        {error && (
+          <Text className="text-red-500 text-sm mt-3 text-center">{error}</Text>
+        )}
+
+        {success && (
+          <View
+            className="mt-3 rounded-lg p-3"
+            style={{ backgroundColor: "#d1fae5" }}
+          >
+            <Text className="text-green-700 text-sm text-center font-semibold">
+              Login successful! Redirecting...
+            </Text>
+          </View>
+        )}
+
         <TouchableOpacity
           className="rounded-lg py-3.5 items-center mt-6"
-          style={{ backgroundColor: colors.accent }}
+          style={{ backgroundColor: success ? "#86efac" : colors.accent }}
           onPress={handleLogin}
+          disabled={success}
         >
           <Text
             className="text-base font-semibold"
             style={{ color: colors.background }}
           >
-            Login
+            {success ? "✓ Done!" : "Login"}
           </Text>
         </TouchableOpacity>
       </View>
