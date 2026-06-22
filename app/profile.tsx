@@ -15,6 +15,7 @@ import { useTheme } from "@/context/ThemeContext";
 import { useThemeColors } from "@/hooks/useThemeColors";
 import { supabase } from "@/lib/supabase";
 import { useFocusEffect } from "expo-router";
+import { getStreak } from "@/utils/streak";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type UserProfile = {
@@ -61,12 +62,21 @@ const Profile = () => {
   const fetchProfile = async () => {
     setLoading(true);
     try {
+      const streak = await getStreak();
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
 
       if (!user) {
         setIsLoggedIn(false);
+
+        setProfile((prev) => ({
+          ...prev,
+          currentStreak: streak.currentStreak,
+          personalBest: streak.personalBest,
+        }));
+
         setLoading(false);
         return;
       }
@@ -110,6 +120,8 @@ const Profile = () => {
           : [],
         quotes,
         totalQuotes: quotes.length,
+        currentStreak: streak.currentStreak,
+        personalBest: streak.personalBest,
       }));
     } catch (err) {
       console.error("Failed to fetch profile:", err);
@@ -146,7 +158,7 @@ const Profile = () => {
         style={{ backgroundColor: colors.background }}
         showsVerticalScrollIndicator={false}
       >
-        <View className="px-6 pt-6 pb-10">
+        <View className="px-6 pt-14 pb-10">
           <View className="flex-row justify-between items-center">
             <TouchableOpacity onPress={() => router.push("/")}>
               <House color={colors.iconPrimary} size={26} strokeWidth={1.5} />
