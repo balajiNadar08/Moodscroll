@@ -172,7 +172,6 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
       await supabase.rpc("decrement_quote_likes", {
         quote_id_input: quote.id,
       });
-      
     } else {
       setLiked(true);
 
@@ -197,8 +196,8 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
           style={{ flex: 1 }}
           resizeMode="cover"
         >
-          <View className="flex-1 bg-black/40">
-            <View className="absolute top-6 left-0 right-0 flex-row justify-between px-6">
+          <View className="flex-1 bg-black/40 justify-between">
+            <View className="flex-row justify-between items-center px-6 pt-14">
               <Link href="/profile">
                 <UserRound color="white" size={26} strokeWidth={1.5} />
               </Link>
@@ -208,35 +207,31 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
               </TouchableOpacity>
             </View>
 
-            <View className="flex-1 justify-center items-center px-12">
-              <ViewShot
-                ref={viewShotRef}
-                options={{ format: "png", quality: 1 }}
+            <View className="flex-1 justify-center items-center pt-12 px-10">
+              <Text
+                style={{ fontFamily: "Inter_400Regular" }}
+                className="text-white text-center text-2xl leading-relaxed tracking-wide"
               >
+                {quote.quote}
+              </Text>
+
+              <View className="items-center mt-8 gap-4">
                 <Text
-                  style={{ fontFamily: "Inter_400Regular" }}
-                  className="text-white text-center text-2xl leading-relaxed tracking-wide"
+                  style={{ fontFamily: "Inter_300Light" }}
+                  className="text-white text-base"
                 >
-                  {quote.quote}
+                  - {quote.author}
                 </Text>
 
-                <View className="pt-8 items-center gap-4">
-                  <Text
-                    style={{ fontFamily: "Inter_300Light" }}
-                    className="text-white text-md"
-                  >
-                    - {quote.author}
-                  </Text>
-                  <Text
-                    style={{ fontFamily: "Inter_300Light" }}
-                    className="text-white text-sm border border-white px-2 rounded-full capitalize"
-                  >
-                    {quote.category}
-                  </Text>
-                </View>
-              </ViewShot>
+                <Text
+                  style={{ fontFamily: "Inter_300Light" }}
+                  className="text-white text-sm border border-white px-3 py-1 rounded-full capitalize"
+                >
+                  {quote.category}
+                </Text>
+              </View>
 
-              <View className="flex-row gap-6 pt-12">
+              <View className="flex-row gap-10 mt-14">
                 <TouchableOpacity onPress={handleLike}>
                   <Heart
                     size={32}
@@ -256,7 +251,7 @@ export default function QuoteCard({ quote, onOpenFilter }: QuoteCardProps) {
               </View>
             </View>
 
-            <View className="absolute bottom-20 left-0 right-0 flex-row justify-between items-end px-6">
+            <View className="flex-row justify-between items-end px-6 pb-10">
               <Link href="/collection">
                 <Boxes color="white" size={26} strokeWidth={1.5} />
               </Link>

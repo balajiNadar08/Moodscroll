@@ -94,7 +94,7 @@ const Settings = () => {
         paddingBottom: 40,
       }}
     >
-      <View className="px-6 mb-10">
+      <View className="px-6 pt-14 mb-10">
         <Text
           style={{
             fontFamily: "Inter_600SemiBold",
@@ -128,7 +128,6 @@ const Settings = () => {
         <SectionTitle title="SUPPORT US" />
         <View className="gap-3">
           <SettingRow title="Give Feedback" href={"/settings/feedback"} />
-          <SettingRow title="Report Bug" href={"/settings"} />
         </View>
       </View>
 
