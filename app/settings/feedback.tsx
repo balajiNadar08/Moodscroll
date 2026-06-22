@@ -83,7 +83,7 @@ export default function Feedback() {
         showsVerticalScrollIndicator={false}
       >
         <Text
-          className="text-3xl font-bold mb-1"
+          className="text-3xl font-bold pt-14 mb-1"
           style={{ color: colors.textPrimary }}
         >
           Share Feedback
