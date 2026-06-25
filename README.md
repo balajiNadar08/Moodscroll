@@ -1,17 +1,17 @@
-# ✨ Quotes App
+# Quotes App
 
 Discover inspiring quotes across spirituality, motivation, romance, humor, philosophy, politics and iconic movie & book moments.
 Built with React Native, featuring a clean UI, smooth performance and a scalable architecture.
 
-## 🚀 Features
+## Features
 
-* 🎲 Explore quotes with a single tap
-* ❤️ Save your favorite quotes
-* 📱 Clean and intuitive mobile experience
-* ⚡ Fast, lightweight and distraction-free
-* 🎨 Clean, dynamic UI
-* ♻️ Reusable components
-* 🖼️ Image & video backgrounds
+*  Explore quotes with a single tap
+*  Save your favorite quotes
+*  Clean and intuitive mobile experience
+*  Fast, lightweight and distraction-free
+*  Clean, dynamic UI
+*  Reusable components
+*  Image & video backgrounds
 
 ### Tech Stack
 
@@ -47,11 +47,4 @@ Built with React Native, featuring a clean UI, smooth performance and a scalable
 ```
 /assets        → images, fonts, videos  
 /components    → reusable UI components  
-/data          → static JSON data (e.g., quotes)  
-/screens       → app screens/views  
-/styles        → global styles and config  
 ```
-
-### License
-
-This project is open-source and available under the MIT License.
